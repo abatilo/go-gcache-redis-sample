@@ -3,7 +3,10 @@ module github.com/abatilo/go-gcache-redis-sample
 go 1.13
 
 require (
+	github.com/abatilo/go-kube-shutdown v1.1.0
+	github.com/bluele/gcache v0.0.0-20190518031135-bc40bd653833
 	github.com/cespare/reflex v0.2.0
+	github.com/julienschmidt/httprouter v1.2.0
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51 // indirect
 	github.com/kr/pretty v0.2.0 // indirect
 	github.com/kr/pty v1.1.8 // indirect
