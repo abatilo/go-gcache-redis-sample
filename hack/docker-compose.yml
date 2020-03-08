@@ -1,0 +1,15 @@
+# Runs a local development environment.
+# This docker-compose.yml lives in /hack instead of /build or /deployment because:
+# /build is more for actual build artifacts. Which this docker-compose does not produce
+# /deployment is for deployment resources, but we're not using this to deploy anything.
+# We're using this as a convenience for local development.
+version: '3'
+services:
+  backend:
+    image: golang:1.13.4
+    volumes:
+      - ..:/go/src/github.com/abatilo/go-gcache-redis-sample
+    working_dir: /go/src/github.com/abatilo/go-gcache-redis-sample
+    command: bash -c "./hack/install_tools.sh && reflex -s -- go run cmd/cached.go svc"
+    ports:
+      - 8000:8000
