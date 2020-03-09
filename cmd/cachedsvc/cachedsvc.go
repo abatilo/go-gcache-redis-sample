@@ -51,9 +51,8 @@ func (s *server) setupHandlers() {
 			val, _ := s.cache.Get(k)
 			m[k] = val.(string)
 		}
-		fmt.Printf("%v\n", m)
-		fmt.Printf("%v\n", s.cache.HitRate())
 
+		fmt.Println(s.cache.HitRate())
 		w.Write([]byte(val.(string)))
 	})
 
@@ -85,29 +84,30 @@ func main() {
 		},
 	})
 
-	gc := gcache.New(1000).
+	gc := gcache.New(50).
 		LFU().
 		LoaderFunc(func(key interface{}) (interface{}, error) {
 			s := key.(string)
-			var res string
 
 			rev, err := client.Get(s).Result()
-
-			if err == redis.Nil {
-				fmt.Printf("%s does not exist, creating\n", s)
-				runes := []rune(s)
-				for i, j := 0, len(runes)-1; i < j; i, j = i+1, j-1 {
-					runes[i], runes[j] = runes[j], runes[i]
-				}
-
-				res = string(runes)
-				err := client.Set(s, res, time.Minute*5).Err()
-				fmt.Printf("Err: %v\n", err)
-				return res, err
+			if err != redis.Nil {
+				// If Redis has it, just send it back
+				return rev, nil
 			}
 
-			fmt.Printf("Err: %v\n", err)
-			return rev, nil
+			// Reverse the string
+			runes := []rune(s)
+			for i, j := 0, len(runes)-1; i < j; i, j = i+1, j-1 {
+				runes[i], runes[j] = runes[j], runes[i]
+			}
+			res := string(runes)
+
+			// Set the key in Redis
+			err = client.Set(s, res, time.Minute*5).Err()
+			if err != nil {
+				fmt.Printf("Err: %v\n", err)
+			}
+			return res, err
 		}).
 		Build()
 
