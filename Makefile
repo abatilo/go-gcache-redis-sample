@@ -5,7 +5,7 @@ SHELL := bash
 MAKEFLAGS += --warn-undefined-variables
 MAKEFLAGS += --no-builtin-rules
 
-GO_VERSION = 1.13.4
+PROJECT_NAME = cached
 
 .PHONY: help
 help: ## View help information
@@ -13,4 +13,4 @@ help: ## View help information
 
 .PHONY: dev
 dev: ## Runs a local development environment
-	docker-compose -f hack/docker-compose.yml up
+	docker-compose -p $(PROJECT_NAME) -f hack/docker-compose.yml up

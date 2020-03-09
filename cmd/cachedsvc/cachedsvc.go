@@ -1,13 +1,14 @@
 package cachedsvc
 
 import (
-	"github.com/bluele/gcache"
-
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/abatilo/go-kube-shutdown/pkg/shutdown"
+	"github.com/bluele/gcache"
+	"github.com/go-redis/redis/v7"
 	"github.com/julienschmidt/httprouter"
 	"github.com/spf13/cobra"
 )
@@ -24,8 +25,9 @@ var (
 )
 
 type server struct {
-	router *httprouter.Router
-	cache  gcache.Cache
+	router      *httprouter.Router
+	cache       gcache.Cache
+	redisClient *redis.Client
 }
 
 func (s *server) setupHandlers() {
@@ -76,19 +78,40 @@ func (s *server) newHTTPServer() *http.Server {
 }
 
 func main() {
+	client := redis.NewFailoverClient(&redis.FailoverOptions{
+		MasterName: "master",
+		SentinelAddrs: []string{
+			"redis-sentinel1:26379",
+		},
+	})
+
 	gc := gcache.New(1000).
 		LFU().
 		LoaderFunc(func(key interface{}) (interface{}, error) {
 			s := key.(string)
-			runes := []rune(s)
-			for i, j := 0, len(runes)-1; i < j; i, j = i+1, j-1 {
-				runes[i], runes[j] = runes[j], runes[i]
+			var res string
+
+			rev, err := client.Get(s).Result()
+
+			if err == redis.Nil {
+				fmt.Printf("%s does not exist, creating\n", s)
+				runes := []rune(s)
+				for i, j := 0, len(runes)-1; i < j; i, j = i+1, j-1 {
+					runes[i], runes[j] = runes[j], runes[i]
+				}
+
+				res = string(runes)
+				err := client.Set(s, res, time.Minute*5).Err()
+				fmt.Printf("Err: %v\n", err)
+				return res, err
 			}
-			return string(runes), nil
+
+			fmt.Printf("Err: %v\n", err)
+			return rev, nil
 		}).
 		Build()
 
-	srv := &server{cache: gc}
+	srv := &server{cache: gc, redisClient: client}
 
 	fmt.Println("Starting server...")
 	err := shutdown.StartSafeServer(srv.newHTTPServer(), "/tmp/live")

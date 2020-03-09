@@ -13,3 +13,20 @@ services:
     command: bash -c "./hack/install_tools.sh && reflex -s -- go run cmd/cached.go svc"
     ports:
       - 8000:8000
+    depends_on:
+      - redis-sentinel1
+  redis-sentinel1:
+    image: 'bitnami/redis-sentinel:latest'
+    environment:
+      - REDIS_MASTER_SET=master
+      - REDIS_MASTER_HOST=redis1
+    ports:
+      - '26379:26379'
+    depends_on:
+      - redis1
+  redis1:
+    image: 'bitnami/redis:latest'
+    volumes:
+      - ./redis.conf:/bitnami/redis-sentinel/conf/redis.conf
+    environment:
+      - ALLOW_EMPTY_PASSWORD=yes
